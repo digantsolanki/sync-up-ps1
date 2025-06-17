@@ -1,33 +1,62 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
-export function middleware(request: NextRequest) {
-    // Get the current path
-    const path = request.nextUrl.pathname;
+const protectedRoutes = ['/dashboard', '/(admin)']
+const publicRoutes = ['/signin', '/reset-password']
 
-    // Check if it's an admin path
-    const isAdminPath = path === '/' || path.startsWith('/(admin)');
+export async function middleware(request: NextRequest) {
+    const path = request.nextUrl.pathname
 
-    // Get the admin authentication status from cookies
-    const isAuthenticated = request.cookies.get('isAdminAuthenticated')?.value === 'true';
+    // Check if the current path is a protected route
+    const isProtectedRoute = protectedRoutes.some(route => {
+        if (route === '/dashboard') {
+            return path === '/dashboard' || path.startsWith('/dashboard/')
+        }
+        if (route === '/(admin)') {
+            return path.startsWith('/dashboard') || path.includes('/(admin)')
+        }
+        return path === route || path.startsWith(route + '/')
+    })
 
-    // If trying to access admin routes without authentication
-    if (isAdminPath && !isAuthenticated) {
-        // Redirect to login page
-        return NextResponse.redirect(new URL('/signin', request.url));
+    const isPublicRoute = publicRoutes.includes(path)
+
+    // Get the JWT token from cookies
+    const token = request.cookies.get('authToken')?.value;
+
+    // Verify the token server-side
+    let isAuthenticated = false;
+    if (token) {
+        try {
+            const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+            await jwtVerify(token, secret);
+            isAuthenticated = true;
+        } catch (error) {
+            console.log('Token verification failed:', error);
+            isAuthenticated = false;
+        }
     }
 
-    // If trying to access login page while already authenticated
-    if (path === '/signin' && isAuthenticated) {
-        // Redirect to admin dashboard
-        return NextResponse.redirect(new URL('/', request.url));
+    // Redirect to signin if trying to access protected route without authentication
+    if (isProtectedRoute && !isAuthenticated) {
+        console.log(`Redirecting unauthenticated user from ${path} to /signin`);
+        return NextResponse.redirect(new URL('/signin', request.nextUrl))
     }
 
-    return NextResponse.next();
+    // Redirect root to signin
+    if (path === '/'){
+        return NextResponse.redirect(new URL('/signin', request.nextUrl))
+    }
+
+    // Redirect authenticated users from public routes to dashboard
+    if (isPublicRoute && isAuthenticated) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    return NextResponse.next()
 }
 
-// Configure the middleware to run on specific paths
 export const config = {
     matcher: [
         /*

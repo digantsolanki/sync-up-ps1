@@ -3,16 +3,12 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { setAdminAuth } from "@/utils/auth";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
-const ADMIN_CREDENTIALS = {
-  email: "admin@admin.com",
-  password: "admin123"
-};
+
 
 export default function SignInForm() {
   const router = useRouter();
@@ -27,20 +23,26 @@ export default function SignInForm() {
     setError("");
 
     try {
-      if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-        await setAdminAuth(true);
-        router.push('/');
-        return;
-      }
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (email === ADMIN_CREDENTIALS.email) {
-        setError("Invalid admin credentials");
+      if (response.ok) {
+        router.push('/dashboard');
+        router.refresh(); // Refresh to update authentication state
       } else {
-        setError("Invalid email or password");
+        const data = await response.json();
+        setError(data.error || 'Login failed');
       }
     } catch (error) {
-      setError("Error during login");
+      setError("Network error during login");
       console.error("Login error:", error);
+    } finally {
+
     }
   };
 
@@ -52,16 +54,10 @@ export default function SignInForm() {
     setPassword(e.target.value);
   };
 
+
   return (
       <div className="flex flex-col flex-1 lg:w-1/2 w-full">
-        <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-          <Link
-              href="/"
-              className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
-            <ChevronLeftIcon />
-          </Link>
-        </div>
+
         <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
           <div>
             <div className="mb-5 sm:mb-8">
