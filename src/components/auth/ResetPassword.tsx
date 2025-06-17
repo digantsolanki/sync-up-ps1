@@ -1,3 +1,4 @@
+
 "use client";
 
 import Input from "@/components/form/input/InputField";
@@ -21,7 +22,7 @@ export default function ResetPassword() {
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            setError("Please enter a valid email address");
+            setError("Please enter a correct email");
             setIsSubmitting(false);
             return;
         }
