@@ -1,9 +1,33 @@
 
-export const setAuthToken = (token: string) => {
-    // Store JWT token securely with httpOnly flag (this would be set by server)
-    document.cookie = `authToken=${token}; path=/; max-age=${60 * 60 * 24}; Secure; SameSite=Strict; HttpOnly`;
+// Client-side auth utilities
+export const signOut = async () => {
+    try {
+        // Call the signout API endpoint which will clear the httpOnly cookie
+        const response = await fetch('/api/auth/signout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            // Redirect to signin page
+            window.location.href = '/signin';
+        }
+    } catch (error) {
+        console.error('Sign out error:', error);
+        // Fallback: force redirect even if API call fails
+        window.location.href = '/signin';
+    }
 };
 
-export const clearAuthToken = () => {
-    document.cookie = 'authToken=; path=/; max-age=0; HttpOnly';
+// Check if user is authenticated (client-side check)
+export const isAuthenticated = async (): Promise<boolean> => {
+    try {
+        // Make a request to verify authentication status
+        const response = await fetch('/api/auth/verify', {
+            credentials: 'include'
+        });
+        return response.ok;
+    } catch {
+        return false;
+    }
 };

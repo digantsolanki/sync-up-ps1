@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
@@ -29,9 +28,17 @@ export async function middleware(request: NextRequest) {
     let isAuthenticated = false;
     if (token) {
         try {
-            const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
-            await jwtVerify(token, secret);
-            isAuthenticated = true;
+            const secret = new TextEncoder().encode(process.env.JWT_SECRET || '$2b$10$NJJiuOS4Vo.1iypQhmQvsOxkKm6GawLNV9ieXwh8KPE4hfydZWl3O');
+            const payload = await jwtVerify(token, secret);
+
+            // Additional validation: check token expiration
+            const currentTime = Math.floor(Date.now() / 1000);
+            if (payload.payload.exp && payload.payload.exp < currentTime) {
+                console.log('Token expired');
+                isAuthenticated = false;
+            } else {
+                isAuthenticated = true;
+            }
         } catch (error) {
             console.log('Token verification failed:', error);
             isAuthenticated = false;
@@ -41,7 +48,18 @@ export async function middleware(request: NextRequest) {
     // Redirect to signin if trying to access protected route without authentication
     if (isProtectedRoute && !isAuthenticated) {
         console.log(`Redirecting unauthenticated user from ${path} to /signin`);
-        return NextResponse.redirect(new URL('/signin', request.nextUrl))
+        // Clear invalid token if it exists
+        const response = NextResponse.redirect(new URL('/signin', request.nextUrl));
+        if (token) {
+            response.cookies.set('authToken', '', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 0,
+                path: '/'
+            });
+        }
+        return response;
     }
 
     // Redirect root to signin

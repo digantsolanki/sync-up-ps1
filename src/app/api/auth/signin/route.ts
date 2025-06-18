@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate JWT token
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || '"$2b$10$NJJiuOS4Vo.1iypQhmQvsOxkKm6GawLNV9ieXwh8KPE4hfydZWl3O"');
         const token = await new SignJWT({
             email: email,
             role: 'admin',
